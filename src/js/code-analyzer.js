@@ -1,160 +1,148 @@
 import * as esprima from 'esprima';
 import * as escodegen from 'escodegen';
 
-const parseCode = (codeToParse) => {
-    const func = esprima.parseScript(codeToParse,{loc: true});
-    return parser(func);
-};
+const parseCode = (codeToParse,params) => {
+    var func = esprima.parseScript(codeToParse,{loc: true});
+    var env= {};
 
-var elseif=0;
-
-const objectLine= (line,type,name,condition,val)=>
-{
-    return { Line:line, Type:type, Name:name, Condition:condition, Val:val};
+    return parser(func,params,env);
 };
 
 
-const parser= (ast)=> {
+
+const parser= (ast,params,env)=> {
     let check = ast.type;
     if(check==='Program')
-        return programParser(ast);
+        return programParser(ast,params,env);
     else if (check === 'ForStatement')
-        return forExp(ast);
+        return forExp(ast,params,env);
     else if(check==='VariableDeclaration')
-        return varDecl(ast);
+        return varDecl(ast,params,env);
     else if(check==='ExpressionStatement')
-        return  assDecl(ast);
+        return  assDecl(ast,params,env);
     else
-        return parser2(ast);
+        return parser2(ast,params,env);
 
 };
 
-
-const parser2= (ast)=> {
+const parser2= (ast,params,env)=> {
     let check = ast.type;
     switch (check) {
-    case 'WhileStatement':
-        return whilExp(ast);
-    case 'IfStatement':
-        return ifExp(ast);
-    case 'ReturnStatement':
-        return returnExp(ast);
-    case 'FunctionDeclaration':
-        return FunctionDcl(ast);
+        case 'WhileStatement':
+            return whilExp(ast,params,env);
+        case 'IfStatement':
+            return ifExp(ast,params,env);
+        case 'ReturnStatement':
+            return returnExp(ast,params,env);
+        case 'FunctionDeclaration':
+            return FunctionDcl(ast,params,env);
+        case 'BlockStatement':
+            return blockStament(ast,params,env);
     }
 };
 
-/*
-const parser2= (ast)=> {
-    let check = ast.type;
-    if (check === 'WhileStatement')
-        return whilExp(ast);
-    if (check === 'IfStatement')
-        return ifExp(ast);
-    if (check === 'ReturnStatement')
-        return returnExp(ast);
-    if(check==='FunctionDeclaration')
-        return FunctionDcl(ast);
-    return;
+
+const blockStament(ast,params,env) =>
+{
+    var bodyN = ast.body.map((rib) => parseCode((rib,params,env)) )
 };
 
-*/
-const programParser= (ast)=>
+const programParser= (ast,params,env)=>
 {
     //const obj= objectLine(ast.loc.start.line, ast.type, '', '','');
     //return ast.body.reduce(((acc,curr)=> acc.concat(parser(curr))),[obj]);
     return ast.body.reduce(((acc,curr)=> acc.concat(parser(curr))),[]);
 };
 
-const FunctionDcl= (ast)=>
+const FunctionDcl= (ast,params,env)=>
 {
-
-    const obj = objectLine(ast.loc.start.line, ast.type, ast.id.name, '','');
-    const parms = ast.params.map((param)=> objectLine (param.loc.start.line,'variable declaration',param.name ,'',''));
-    return ast.body.body.reduce(((acc,curr)=> acc.concat(parser(curr))),[obj].concat(parms));
+    //const obj = objectLine(ast.loc.start.line, ast.type, ast.id.name, '','');
+    const parms = ast.params.reduce((acc,curr)=> acc.concat(curr.name),[]);
+    parms.map((name)=> env[name]= name);
+    const bodyN = parseCode(ast.body,params,env);
+    ast.body=bodyN;
+    return ast;
 
 };
 
-const varDecl= (ast)=>
-{
 
-    return ast.declarations.reduce((acc,curr) => acc.concat(objectLine(curr.loc.start.line, ast.type, curr.id.name,'',curr.init ? escodegen.generate(curr.init) : '')),[]);
+const varDecl= (ast,params,env)=>
+{
+    ast.declarations.map((dec)=> {const value = dec.init;
+        if(value === undefined)
+        {
+            env[dec.id.name] =null;
+        }
+        else {
+            env[dec.id.name] =escodegen.generate(sub(value,params,env));
+        }}
+    )
+    return ast;
 
 };
 
-const assDecl= (ast)=>
+const assDecl= (ast,params,env)=>
 {
-
-    return  objectLine(ast.expression.loc.start.line, ast.expression.type, escodegen.generate(ast.expression.left), '',escodegen.generate(ast.expression.right));
+    env[ast.left.name] = escodegen.generate(sub(ast.right,params,env));
+    return ast;
+    /// return  objectLine(ast.expression.loc.start.line, ast.expression.type, escodegen.generate(ast.expression.left), '',escodegen.generate(ast.expression.right));
 
 };
 
-const whilExp= (ast)=>{
+
+
+const ifExp= (ast,params,env)=> {
+    ast.test = sub(ast.test,params,env);
+    var new1Env = Object.assign({},env);
+    var new2Env = Object.assign({},env);
+    ast.consequent = parseCode(ast.consequent,params,newEnv1);
+    ast.alternate = parseCode(ast.alternate,params,newEnv2);
+    //TODO EVALLLLLLLLLLLLLLLLLLLLLL
+    ast['testTF'] = checkTest(ast.test,ast,params,env)
+    //END EVALLLLLLLL
+    return ast;
+};
+
+
+const whilExp= (ast,params,env)=>{
+
+    ast.test = sub(ast.test,params,env);
+    var newEnv = Object.assign({},env);
+    const bodyN = parseCode(ast.body,newEnv);
+    ast.body=bodyN;
+    //TODO EVALLLLLLLLLLLLLLLLLLLLLL
+    ast['testTF'] = checkTest(ast.test,params,env)
+    //END EVALLLLLLLL
+    return ast;
+};
+
+
+const checkTest(ast,params,env) =>{
+//TODO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    trurn false;
+};
+
+const returnExp= (ast,params,env)=> {
+    ast.argument= sub(ast,params,env);
+    return ast;
+};
+
+
+const sub(ast,params,env)=>
+{
+    //TODO
+};
+
+/*
+const forExp= (ast,params,env)=>{
 
     const test = escodegen.generate(ast.test);
     const tmp= objectLine (ast.loc.start.line,ast.type, '',test,'');
     const all = ast.body.body.reduce((acc,curr) => acc.concat(parser(curr)),[]);
-    // const all = parser(ast.body.body);
     return [tmp].concat(all);
 
 };
+*/
 
-const ifExp= (ast)=> {
-    const test = escodegen.generate(ast.test);
-    let all;
-    let tmp=findTmp(ast,test);
-    let ezer = findAlt(ast);
-    if (ast.consequent.body === undefined) {
-        all = parser(ast.consequent);
-    }
-    else {
-        all = ast.consequent.body.reduce((acc, curr) => acc.concat(parser(curr)), []);
-    }
-    if (ezer === '') {
-        return [tmp].concat(all);
-    }
-    else {
-        return [tmp].concat(all).concat(ezer);
-    }
-};
-
-const findTmp=(ast,test)=>
-{
-    if (elseif === 0) {
-        return  objectLine(ast.loc.start.line, ast.type, '', test, '');
-    }
-    else {
-        return objectLine(ast.loc.start.line, 'else if statement', '', test, '');
-    }
-};
-
-const findAlt=(ast)=>
-{
-    if (ast.alternate === null) {
-        elseif = 0;
-        return '';
-
-    }
-    else {
-
-        elseif = 1;
-        let ezer = parser(ast.alternate);
-        elseif = 0;
-        return ezer;
-    }
-};
-
-const returnExp= (ast)=> {
-    const test = objectLine (ast.loc.start.line,ast.type, '','', escodegen.generate(ast.argument));
-    return [test];
-};
-const forExp= (ast)=>{
-
-    const test = escodegen.generate(ast.test);
-    const tmp= objectLine (ast.loc.start.line,ast.type, '',test,'');
-    const all = ast.body.body.reduce((acc,curr) => acc.concat(parser(curr)),[]);
-    return [tmp].concat(all);
-
-};
 
 export {parseCode};
