@@ -37,14 +37,18 @@ const parser2= (ast,params,env)=> {
         case 'FunctionDeclaration':
             return FunctionDcl(ast,params,env);
         case 'BlockStatement':
-            return blockStament(ast,params,env);
+            return blockStatement(ast,params,env);
     }
 };
 
 
-const blockStament(ast,params,env) =>
+
+const blockStatement = (ast,params,env) =>
 {
-    var bodyN = ast.body.map((rib) => parseCode((rib,params,env)) )
+    var bodyN = ast.body.map((rib) => parseCode(rib , params , env))
+    bodyN.filter((rib) => (rib.type != 'ExpressionStatement' && rib.type != 'VariableDeclaration'))
+    ast.body=bodyN;
+    return ast;
 };
 
 const programParser= (ast,params,env)=>
