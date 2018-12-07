@@ -1,20 +1,20 @@
 import $ from 'jquery';
 import {parseCode} from './code-analyzer';
-
+import * as escodegen from 'escodegen';
 $(document).ready(function () {
     $('#codeSubmissionButton').click(() => {
         let codeToParse = $('#codePlaceholder').val();
         let parsedCode = parseCode(codeToParse);
-        $('#parsedCode').val(JSON.stringify(parsedCode, null, 2));
+        $('#parsedCode').val(escodegen.generate(parsedCode));
         let str = '<table>' +
             '<th>Line</th>' +
             '<th>Type</th>' +
             '<th>Name</th>' +
             '<th>Condition</th>' +
             '<th>Value</th>';
-        str=makeStr(str,parsedCode);
-        str+='</table>';
-        $('#exps').html(str);
+        // str=makeStr(str,parsedCode);
+       //  str+='</table>';
+        // $('#exps').html(str);
     });
 });
 

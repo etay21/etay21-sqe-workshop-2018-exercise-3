@@ -5,7 +5,9 @@ const parseCode = (codeToParse,params) => {
     var func = esprima.parseScript(codeToParse,{loc: true});
     var env= {};
 
-    return parser(func,params,env);
+    let x=  parser(func,params,env);
+    console.log(x);
+    return x;
 };
 
 
@@ -14,8 +16,6 @@ const parser= (ast,params,env)=> {
     let check = ast.type;
     if(check==='Program')
         return programParser(ast,params,env);
-    else if (check === 'ForStatement')
-        return forExp(ast,params,env);
     else if(check==='VariableDeclaration')
         return varDecl(ast,params,env);
     else if(check==='ExpressionStatement')
@@ -25,19 +25,19 @@ const parser= (ast,params,env)=> {
 
 };
 
-const parser2= (ast,params,env)=> {
+const parser2 = (ast,params,env)=> {
     let check = ast.type;
     switch (check) {
-        case 'WhileStatement':
-            return whilExp(ast,params,env);
-        case 'IfStatement':
-            return ifExp(ast,params,env);
-        case 'ReturnStatement':
-            return returnExp(ast,params,env);
-        case 'FunctionDeclaration':
-            return FunctionDcl(ast,params,env);
-        case 'BlockStatement':
-            return blockStatement(ast,params,env);
+    case 'WhileStatement':
+        return whilExp(ast,params,env);
+    case 'IfStatement':
+        return ifExp(ast, params, env);
+    case 'ReturnStatement':
+        return returnExp(ast,params,env);
+    case 'FunctionDeclaration':
+        return FunctionDcl(ast,params,env);
+    case 'BlockStatement':
+        return blockStatement(ast,params,env);
     }
 };
 
@@ -45,23 +45,25 @@ const parser2= (ast,params,env)=> {
 
 const blockStatement = (ast,params,env) =>
 {
-    var bodyN = ast.body.map((rib) => parseCode(rib , params , env))
-    bodyN.filter((rib) => (rib.type != 'ExpressionStatement' && rib.type != 'VariableDeclaration'))
+    let bodyN = ast.body.map((rib) => parser(rib , params , env));
+    bodyN = bodyN.filter((rib) => ((rib.type !== 'ExpressionStatement') && (rib.type !== 'VariableDeclaration')));
     ast.body=bodyN;
     return ast;
 };
 
-const programParser= (ast,params,env)=>
+const programParser = (ast,params,env)=>
 {
-    return ast.body.reduce(((acc,curr)=> acc.concat(parser(curr))),[]);
+    //return ast.body.reduce(((acc,curr)=> acc.concat(parser(curr))),[]);
+    ast.body =ast.body.map((rib)=> parser(rib,params,env));
+    return ast;
 };
 
-const FunctionDcl= (ast,params,env)=>
+const FunctionDcl = (ast,params,env)=>
 {
     //const obj = objectLine(ast.loc.start.line, ast.type, ast.id.name, '','');
     const parms = ast.params.reduce((acc,curr)=> acc.concat(curr.name),[]);
-    parms.map((name)=> env[name]= name);
-    const bodyN = parseCode(ast.body,params,env);
+   // parms.map((name)=> env[name]= name);
+    const bodyN = parser(ast.body,params,env);
     ast.body=bodyN;
     return ast;
 
@@ -70,36 +72,45 @@ const FunctionDcl= (ast,params,env)=>
 
 const varDecl= (ast,params,env)=>
 {
-    ast.declarations.map((dec)=> {const value = dec.init;
-        if(value === undefined)
+
+    ast.declarations.map((dec)=> {
+        const value = dec.init;
+
+        if(value === null)
         {
             env[dec.id.name] =null;
         }
         else {
-            env[dec.id.name] =escodegen.generate(sub(value,params,env));
+            env[dec.id.name] =sub(value,params,env);
         }}
-    )
+    );
     return ast;
 
 };
 
 const assDecl= (ast,params,env)=>
 {
-    env[ast.left.name] = escodegen.generate(sub(ast.right,params,env));
+    env[ast.left.name] = sub(ast.right,params,env);
     return ast;
 };
 
 
 
 const ifExp= (ast,params,env)=> {
+
+
     ast.test = sub(ast.test,params,env);
+
     var new1Env = Object.assign({},env);
     var new2Env = Object.assign({},env);
-    ast.consequent = parseCode(ast.consequent,params,newEnv1);
-    ast.alternate = parseCode(ast.alternate,params,newEnv2);
+    ast.consequent = parser(ast.consequent,params,new1Env);
+    if( ast.alternate != undefined) {
+        ast.alternate = parser(ast.alternate, params, new2Env);
+    }
     //TODO EVALLLLLLLLLLLLLLLLLLLLLL
-    ast['testTF'] = checkTest(ast.test,ast,params,env)
+    ast['testTF'] = checkTest(ast.test,ast,params,env);
     //END EVALLLLLLLL
+
     return ast;
 };
 
@@ -108,10 +119,10 @@ const whilExp= (ast,params,env)=>{
 
     ast.test = sub(ast.test,params,env);
     var newEnv = Object.assign({},env);
-    const bodyN = parseCode(ast.body,newEnv);
+    const bodyN = parser(ast.body,newEnv);
     ast.body=bodyN;
     //TODO EVALLLLLLLLLLLLLLLLLLLLLL
-    ast['testTF'] = checkTest(ast.test,params,env)
+    ast['testTF'] = checkTest(ast.test,params,env);
     //END EVALLLLLLLL
     return ast;
 };
@@ -123,14 +134,34 @@ const checkTest = (ast,params,env) =>{
 };
 
 const returnExp= (ast,params,env)=> {
-    ast.argument= sub(ast,params,env);
+    ast.argument= sub(ast.argument,params,env);
     return ast;
 };
 
 
 const sub = (ast,params,env)=>
 {
-    //TODO
+    console.log(ast);
+    let type = ast.type;
+    if(type === 'BinaryExpression'){
+        ast.left = sub(ast.left,params,env);
+        ast.right = sub(ast.right,params,env);
+    }
+    else if(type === 'Identifier')
+    {
+        if(env[ast.name]) {
+            ast = env[ast.name];
+        }
+
+    }
+
+    else if(type === 'ComputedMemberExpression'){
+        if(env[ast.name]) {
+            ast = env[ast.name];
+        }
+    }
+    console.log(ast);
+    return ast;
 };
 
 /*
