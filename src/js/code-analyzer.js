@@ -53,8 +53,6 @@ const blockStatement = (ast,params,env) =>
 
 const programParser= (ast,params,env)=>
 {
-    //const obj= objectLine(ast.loc.start.line, ast.type, '', '','');
-    //return ast.body.reduce(((acc,curr)=> acc.concat(parser(curr))),[obj]);
     return ast.body.reduce(((acc,curr)=> acc.concat(parser(curr))),[]);
 };
 
@@ -89,8 +87,6 @@ const assDecl= (ast,params,env)=>
 {
     env[ast.left.name] = escodegen.generate(sub(ast.right,params,env));
     return ast;
-    /// return  objectLine(ast.expression.loc.start.line, ast.expression.type, escodegen.generate(ast.expression.left), '',escodegen.generate(ast.expression.right));
-
 };
 
 
@@ -121,9 +117,9 @@ const whilExp= (ast,params,env)=>{
 };
 
 
-const checkTest(ast,params,env) =>{
+const checkTest = (ast,params,env) =>{
 //TODO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    trurn false;
+    return false;
 };
 
 const returnExp= (ast,params,env)=> {
@@ -132,7 +128,7 @@ const returnExp= (ast,params,env)=> {
 };
 
 
-const sub(ast,params,env)=>
+const sub = (ast,params,env)=>
 {
     //TODO
 };
