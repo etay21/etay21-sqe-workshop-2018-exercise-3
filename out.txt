@@ -1,0 +1,57 @@
+
+> sample-project@1.0.0 test C:\Users\etay2\Desktop\סמסטר ה\webstorm\sqe-workshop-2018-sample-project-2
+> mocha-webpack --webpack-config webpack.test.config.js --reporter=json
+
+ WEBPACK  Compiling...
+
+ WEBPACK  Compiled successfully in 560ms
+
+ MOCHA  Testing...
+
+{
+  "stats": {
+    "suites": 1,
+    "tests": 2,
+    "passes": 2,
+    "pending": 0,
+    "failures": 0,
+    "start": "2018-12-08T21:34:39.256Z",
+    "end": "2018-12-08T21:34:39.266Z",
+    "duration": 10
+  },
+  "tests": [
+    {
+      "title": "test 1 -clean",
+      "fullTitle": "The javascript parser test 1 -clean",
+      "duration": 2,
+      "currentRetry": 0,
+      "err": {}
+    },
+    {
+      "title": "test 2 ",
+      "fullTitle": "The javascript parser test 2 ",
+      "duration": 6,
+      "currentRetry": 0,
+      "err": {}
+    }
+  ],
+  "pending": [],
+  "failures": [],
+  "passes": [
+    {
+      "title": "test 1 -clean",
+      "fullTitle": "The javascript parser test 1 -clean",
+      "duration": 2,
+      "currentRetry": 0,
+      "err": {}
+    },
+    {
+      "title": "test 2 ",
+      "fullTitle": "The javascript parser test 2 ",
+      "duration": 6,
+      "currentRetry": 0,
+      "err": {}
+    }
+  ]
+} MOCHA  Tests completed successfully
+
