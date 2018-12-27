@@ -2,90 +2,116 @@ import * as esprima from 'esprima';
 import * as escodegen from 'escodegen';
 
 
-var globalEnv={};
+//var globalEnv={};
 var vars;
+var up = '';
+var down ='';
+var letCounter=0;
+var assCounter=0;
+var ifCounter=0;
+var whileCounter=0;
+var returnCounter=0;
+var flagLet=false;
+var counterLetForClose=0;
+var nullCounter=0;
+var isMain=true;
 
 const parseCode = (codeToParse,params) => {
     var func = esprima.parseScript(codeToParse,{loc: true});
     var env= {};
     vars = esprima.parseScript(params,{loc: true});
+    let flowArr={};
+    console.log(func);
+    let x=  parser(func,params,env,flowArr);
+    console.log(up);
+    console.log(down);
+    console.log(''+up+'\n'+down);
 
-    let x=  parser(func,params,env);
-
-    let y =x.body.map((rib)=> htmlParser(rib));
-    y='<pre>'+y+'</pre>';
-    return y;
+    //let y =x.body.map((rib)=> htmlParser(rib));
+    //y='<pre>'+y+'</pre>';
+    return ''+up+down;
 };
 
 
-const parser= (ast,params,env)=> {
-    //debugger;
+const parser= (ast,params,env,flowArr)=> {
     let check = ast.type;
     if(check==='Program')
-        return programParser(ast,params,env);
+        return programParser(ast,params,env,flowArr);
     else if(check==='VariableDeclaration')
-        return varDecl(ast,params,env);
+        return varDecl(ast,params,env,flowArr);
     else if(check==='ExpressionStatement')
-        return  assDecl(ast,params,env);
+    { var x= assDecl(ast,params,env,flowArr);
+        return x;
+    }
+
     else
-        return parser2(ast,params,env);
+        return parser2(ast,params,env,flowArr);
 
 };
 
-const parser2= (ast,params,env)=> {
+const parser2= (ast,params,env,flowArr)=> {
     let check = ast.type;
     if(check==='FunctionDeclaration')
-        return  FunctionDcl(ast,params,env);
+        return  FunctionDcl(ast,params,env,flowArr);
     else if(check==='BlockStatement')
-        return  blockStatement(ast,params,env);
+    {var x=blockStatement(ast,params,env,flowArr);
+
+        return  x;
+    }
+
     else
-        return parser3(ast,params,env);
+        return parser3(ast,params,env,flowArr);
 
 };
-const parser3= (ast,params,env)=> {
+const parser3= (ast,params,env,flowArr)=> {
     let check = ast.type;
     if (check === 'WhileStatement')
-        return whilExp(ast, params, env);
+        return whilExp(ast,params,env,flowArr);
     else if (check === 'IfStatement')
-        return ifExp(ast, params, env);
+        return ifExp(ast,params,env,flowArr);
     else
-        return returnExp(ast, params, env);
+        return returnExp(ast,params,env,flowArr);
 
 };
 
-const blockStatement = (ast,params,env) =>
+const blockStatement = (ast,params,env,flowArr) =>
 {
-    let bodyN = ast.body.map((rib) => parser(rib , params , env));
-    bodyN = bodyN.filter((rib) => { if(rib.type === 'ExpressionStatement')
-    {
-        return globalEnv[rib.expression.left.name];
-    }
-    return rib.type !== 'VariableDeclaration';
+    var ismainFrame = JSON.parse(JSON.stringify(isMain));
+    var tmp='';
+
+    ast.body.map((rib) => { tmp+= parser(rib , params , env,flowArr);
     });
-    ast.body=bodyN;
-    return ast;
+    if(ismainFrame===false) {
+        var arr = tmp.split('\n');
+
+        for (let i = 0; i < arr.length - 2; i++) {
+            down += arr[i] + '->' + arr[i + 1] + '\n';
+        }
+
+
+        var y = arr[0];
+
+        down += flowArr + '->' + y + '\n';
+
+        down+=arr[arr.length-2]+'->'+'return0'+'\n';
+        return arr[arr.length - 2] + '\n';
+    }
+    else return '';
+
 };
 
-const programParser = (ast,params,env)=>
-{
+const programParser = (ast,params,env,flowArr)=> {
+    up+='st=>start: Start|past\n';
+    return ast.body.map((rib) => parser(rib, params, env,'st'));
 
-    ast.body =ast.body.map((rib)=> parser(rib,params,env));
-    ast.body = ast.body.filter((rib) => { if(rib.type === 'ExpressionStatement')
-    {
-        return globalEnv[rib.expression.left.name];
-    }
-    return rib.type !== 'VariableDeclaration';
-    });
-    return ast;
 };
-
 const funchelp = (ast,params,env,parms)=>
 {
     for (let i = 0; i < params.length; i = i + 1) {
-        globalEnv[parms[i]] = vars.body[0].expression.expressions[i];
+        env[parms[i]] = vars.body[0].expression.expressions[i];
     }
 };
-const FunctionDcl = (ast,params,env)=>
+const FunctionDcl = (ast,params,env,flowArr)=>
 {
     const parms = ast.params.reduce((acc,curr)=> acc.concat(curr.name),[]);
     if(vars.body[0].expression.expressions) {
@@ -94,89 +120,200 @@ const FunctionDcl = (ast,params,env)=>
     else{
 
         for (let i = 0; i < params.length; i = i + 1) {
-            globalEnv[parms[i]] = vars.body[0].expression;
+            env[parms[i]] = vars.body[0].expression;
         }
     }
+    let counter=0;
 
-    ast.body = parser(ast.body,params,env);
-    return ast;
+    ast.body.body.map((rib) => {if(rib.type==='VariableDeclaration')
+        counter++;});
+    counterLetForClose=counter;
+    return parser(ast.body,params,env,flowArr);
 
 };
 
-const varDecl= (ast,params,env)=>
+const varDecl= (ast,params,env,flowArr)=>
 {
+    counterLetForClose--;
+
+
     ast.declarations.map((dec)=> {
         const value = dec.init;
-
+        var tmp = Object.assign({},value);
         if(value === null)
         {
             env[dec.id.name] =null;
         }
         else {
-            env[dec.id.name] =sub(value,params,env);
+            env[dec.id.name] =sub(tmp,params,env);
         }}
     );
-    return ast;
+
+    if(flagLet===false){
+        up+='let'+letCounter+'=>operation: ';
+        ast.declarations.map((dec)=> {
+            up+= escodegen.generate(dec)+'\n';
+
+        });
+
+        letCounter++;
+        flagLet=true;
+    }
+    else if(flagLet===true){
+
+        ast.declarations.map((dec)=> {
+            up+= escodegen.generate(dec)+'\n';
+
+        });
+
+    }
+    if(counterLetForClose===0)
+    {
+        up+='|past\n';
+        down+='st->let0'+'\n';
+        return 'let0\n';
+    }
+    return '';
 
 };
-const assDecl= (ast,params,env)=>
+const assDecl= (ast,params,env,flowArr)=>
 {
-    //console.log (ast);
-    env[ast.expression.left.name] = sub(ast.expression.right,params,env);
+    up+='ass'+assCounter+ '=>operation: '+escodegen.generate(ast.expression) +'|past\n';
+    assCounter++;
+    var tmpAst = Object.assign({},ast.expression.right);
+    env[ast.expression.left.name] = sub(tmpAst,params,env);
 
-    return ast;
+    var x='ass' + (assCounter-1)+'\n';
+    return x;
+
 };
 
-const ifExp = (ast,params,env)=> {
-    ast.test = sub(ast.test,params,env);
+const ifExp = (ast,params,env,flowArr)=> {
+    isMain=false
+    // var copyAst = Object.assign({},ast);
+
+    //var tmpAst = Object.assign({},ast.test);
+    let tmpAst = JSON.parse(JSON.stringify(ast.test));
+    var tmpAstTest= sub(tmpAst,params,env);
+
+    // ast.test = sub(ast.test,params,env);
+    //var tmpast = escodegen.generate(tmpAstTest);
+    //var newast =  esprima.parseScript(tmpast);
+
+    // var etay = sub(tmpAstTest,params,env);
+
+    var tmp = eval(escodegen.generate(tmpAstTest));
+    let ifCount = JSON.parse(JSON.stringify(ifCounter));
+    up+='if'+ifCounter+ '=>condition: '+escodegen.generate(ast.test) +'|'+evaltmp(tmp,ast)+'\n';
+    ifCounter++;
+    if(down==='')
+    {
+        down+='st->if'+ifCounter-1+'\n';
+    }
+    else if(whileCounter===0 && ifCounter===1)
+    {
+        down+='let0->if0\n';
+    }
+
+
     var new1Env = Object.assign({},env);
     var new2Env = Object.assign({},env);
-    ast.consequent = parser(ast.consequent,params,new1Env);
-    if( ast.alternate ) {
-        ast.alternate = parser(ast.alternate, params, new2Env);
+    up+='null'+nullCounter+ '=>operation: '+'null|green\n';
+
+    var tmpNull = JSON.parse(JSON.stringify(nullCounter));
+    nullCounter++;
+    var returnCons='';
+
+    returnCons= parser(ast.consequent,params,new1Env,'if'+ifCount+'(yes)');
+    
+
+
+    //ast.consequent = parser(ast.consequent,params,new1Env);
+    //down+='if'+ifCount +'(yes)'+'->'+returnCons+'\n';
+    //down+=returnCons+'->'+'null'+tmpNull+'\n';
+    //let tmpAstAlt={};
+    let returnAlt='';
+    if(ast.alternate) {
+
+        returnAlt= parser(ast.alternate, params, new2Env,'if'+ifCount+'(no)');
+        down+='if'+ifCount +'(no)'+'->'+returnAlt+'\n';
+
+
+        //var x1 = returnAlt[returnAlt.length-2];
+        //down+=x1+'->'+'null'+tmpNull+'\n';
+        //var y1 = returnAlt[0];
+       // down+='if'+ifCount+'(no)->'+y1+'\n';
+        ////
+
+        // down+='if'+ifCount +'(no)'+'->'+returnAlt+'\n';
+        // down+=returnAlt+'->'+'null'+tmpNull+'\n';
     }
-    var tmpast = escodegen.generate(ast.test);
-    var newast =  esprima.parseScript(tmpast);
-    let etay = sub(newast.body[0].expression,params,globalEnv);
 
-    let tmp = eval(escodegen.generate(etay));
 
-    return evaltmp(tmp,ast);
+    return 'if'+ifCount+'\n';
 
 };
 
 const evaltmp = (tmp,ast)=>{
     if(tmp===true) {
-        ast['testTF'] = 'green';
+        return 'green';
     }
     else {
-        ast['testTF'] = 'red';
+        return 'red';
     }
-    return ast;
+
 };
 
-const whilExp= (ast,params,env)=>{
-    ast.test = sub(ast.test,params,env);
+const whilExp= (ast,params,env,flowArr)=>{
+    isMain=false
+    //var tmpast = escodegen.generate(ast.test);
+    // var newast =  esprima.parseScript(tmpast);
+
+    ////
+
+    let tmpAst = JSON.parse(JSON.stringify(ast.test));
+    var tmpAstTest= sub(tmpAst,params,env);
+
+    // ast.test = sub(ast.test,params,env);
+    //var tmpast = escodegen.generate(tmpAstTest);
+    //var newast =  esprima.parseScript(tmpast);
+
+    // var etay = sub(tmpAstTest,params,env);
+
+    var tmp = eval(escodegen.generate(tmpAstTest));
+    ///
+
+    //let tmp = eval(escodegen.generate(tmp,params,env)));
+    up+='while'+whileCounter+ '=>cond: '+escodegen.generate(ast.test) +'|'+evaltmp(tmp,ast)+'\n';
+    whileCounter++;
+    if(down==='')
+    {
+        down+='st->while'+whileCounter-1;
+    }
+    if(whileCounter===1&&ifCounter===0)
+    {
+        down+='let0->while'+whileCounter-1+'\n';
+    }
+    //let tmpTest = sub(ast.test,params,env);
+
     var newEnv = Object.assign({},env);
-    ast.body= parser(ast.body,params,newEnv);
-    //ast.body=bodyN;
-    var tmpast = escodegen.generate(ast.test);
-    var newast =  esprima.parseScript(tmpast);
-    let tmp = eval(escodegen.generate((sub(newast.body[0].expression,params,globalEnv))));
-    if(tmp===true) {
-        ast['testTF'] = 'green';
-    }
-    else {
-        ast['testTF'] = 'red';
-    }
-    return ast;
+
+    return parser(ast.body,params,newEnv,flowArr);
+
+
 };
 
 
-const returnExp= (ast,params,env)=> {
+const returnExp= (ast,params,env,flowArr)=> {
 
-    ast.argument= sub(ast.argument,params,env);
-    return ast;
+    var tmpAstArgument= sub(ast.argument,params,env);
+
+    up+='return'+returnCounter+ '=>operation: '+escodegen.generate(ast.argument) +'|past\n';
+
+    returnCounter++;
+
+    var x='return' + (returnCounter-1)+'\n';
+    return x;
 };
 
 
@@ -210,93 +347,5 @@ const ident = (ast,params,env)=>{
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-const htmlParser= (ast)=> {
-    let check = ast.type;
-    if (check === 'WhileStatement')
-        return whilExpH(ast);
-    if (check === 'IfStatement')
-        return ifExpH(ast);
-    if (check === 'ReturnStatement')
-        return returnExpH(ast);
-    return htmlParser2(ast);
-
-};
-
-const htmlParser2 = (ast)=> {
-    let check = ast.type;
-    switch (check) {
-    case 'FunctionDeclaration':
-        return FunctionDclH(ast);
-    case 'ExpressionStatement':
-        return expH(ast);
-    case 'BlockStatement':
-        return blockStatementH(ast);
-    }
-};
-
-const expH = (ast)=>
-{
-    let tmpSpace = space(ast);
-    return  tmpSpace + escodegen.generate(ast);
-};
-const FunctionDclH = (ast)=> {
-    const parms = ast.params.reduce((acc,curr)=> acc.concat(curr.name),[]);
-    let tmp= '<br>' + 'function ' + ast.id.name + '(';
-    parms.map((rib) => tmp += rib + ',');
-    tmp=tmp.slice(0,tmp.length-1);
-    tmp = tmp + ')' +'{' + '<br>';
-    return tmp + htmlParser(ast.body) ;
-};
-
-const space = (ast) =>
-{
-    let num= ast.loc.start.column;
-    let space='';
-    for(let i=0;i<num;i++)
-    {
-        space += ' ';
-    }
-    return space;
-};
-const blockStatementH = (ast)=>
-{
-    let tmp='';
-    let tmpSpace = space(ast);
-    // let tmp = tmpSpace + '{<br>';
-    ast.body.map((rib) => tmp += (htmlParser(rib) + '<br>'));
-    tmp += tmpSpace;
-    return tmp;
-};
-const ifExpH = (ast)=>
-{
-    let tmpSpace = space(ast);
-
-    let tmp = tmpSpace + 'if ';
-    tmp += '<span style="background-color:' + ast.testTF + ';">(' + escodegen.generate(ast.test) + ') </span>'+'{' + '<br>';
-    tmp += htmlParser(ast.consequent)+'<br>'+tmpSpace+'}';
-
-    if(ast.alternate){
-        tmp +=  '<br>'+tmpSpace+' else ' + '<br>' + htmlParser(ast.alternate);
-    }
-
-    return tmp ;
-};
-//
-const whilExpH = (ast)=>
-{
-    let tmpSpace = space(ast);
-    let tmp = tmpSpace + 'while ';
-    tmp += '<span style="background-color:' + ast.testTF + ';">(' + escodegen.generate(ast.test) + ')</span>'+'<br>';
-
-    tmp += tmpSpace+'{'+'<br>'+htmlParser(ast.body) + '<br>'+tmpSpace+ '}';
-    return tmp;
-};
-
-const returnExpH =(ast)=>
-{
-    let tmpSpace = space(ast);
-    return  tmpSpace + escodegen.generate(ast);
-};
 
 export {parseCode};
