@@ -1,6 +1,6 @@
 import * as esprima from 'esprima';
 import * as escodegen from 'escodegen';
-import * as js2flowchart from 'js2flowchart';
+
 
 var globalEnv={};
 var vars;
