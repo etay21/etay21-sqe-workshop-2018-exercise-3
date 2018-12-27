@@ -40,8 +40,8 @@ $(document).ready(function () {
                 'current' : {'fill' : 'yellow', 'font-color' : 'red', 'font-weight' : 'bold'},
                 'future' : { 'fill' : '#FFFF99'},
                 'request' : { 'fill' : 'blue'},
-                'green': {'fill' : '#444444'},
-                'red': {'fill' : '#444444'},
+                'green': {'fill' : '#7FFF00'},
+                'red': {'fill' : '#FF0000'},
                 'approved' : { 'fill' : '#58C4A3', 'font-size' : 12, 'yes-text' : 'APPROVED', 'no-text' : 'n/a' },
                 'rejected' : { 'fill' : '#C45879', 'font-size' : 12, 'yes-text' : 'n/a', 'no-text' : 'REJECTED' }
             }

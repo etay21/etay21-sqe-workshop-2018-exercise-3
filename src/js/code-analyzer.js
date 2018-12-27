@@ -22,7 +22,8 @@ const parseCode = (codeToParse,params) => {
     vars = esprima.parseScript(params,{loc: true});
     let flowArr={};
     console.log(func);
-    let x=  parser(func,params,env,flowArr);
+    var color='past';
+    let x=  parser(func,params,env,flowArr,color);
     console.log(up);
     console.log(down);
     console.log(''+up+'\n'+down);
@@ -33,53 +34,53 @@ const parseCode = (codeToParse,params) => {
 };
 
 
-const parser= (ast,params,env,flowArr)=> {
+const parser= (ast,params,env,flowArr,color)=> {
     let check = ast.type;
     if(check==='Program')
-        return programParser(ast,params,env,flowArr);
+        return programParser(ast,params,env,flowArr,color);
     else if(check==='VariableDeclaration')
-        return varDecl(ast,params,env,flowArr);
+        return varDecl(ast,params,env,flowArr,color);
     else if(check==='ExpressionStatement')
-    { var x= assDecl(ast,params,env,flowArr);
+    { var x= assDecl(ast,params,env,flowArr,color);
         return x;
     }
 
     else
-        return parser2(ast,params,env,flowArr);
+        return parser2(ast,params,env,flowArr,color);
 
 };
 
-const parser2= (ast,params,env,flowArr)=> {
+const parser2= (ast,params,env,flowArr,color)=> {
     let check = ast.type;
     if(check==='FunctionDeclaration')
-        return  FunctionDcl(ast,params,env,flowArr);
+        return  FunctionDcl(ast,params,env,flowArr,color);
     else if(check==='BlockStatement')
-    {var x=blockStatement(ast,params,env,flowArr);
+    {var x=blockStatement(ast,params,env,flowArr,color);
 
         return  x;
     }
 
     else
-        return parser3(ast,params,env,flowArr);
+        return parser3(ast,params,env,flowArr,color);
 
 };
-const parser3= (ast,params,env,flowArr)=> {
+const parser3= (ast,params,env,flowArr,color)=> {
     let check = ast.type;
     if (check === 'WhileStatement')
-        return whilExp(ast,params,env,flowArr);
+        return whilExp(ast,params,env,flowArr,color);
     else if (check === 'IfStatement')
-        return ifExp(ast,params,env,flowArr);
+        return ifExp(ast,params,env,flowArr,color);
     else
-        return returnExp(ast,params,env,flowArr);
+        return returnExp(ast,params,env,flowArr,color);
 
 };
 
-const blockStatement = (ast,params,env,flowArr) =>
+const blockStatement = (ast,params,env,flowArr,color) =>
 {
     var ismainFrame = JSON.parse(JSON.stringify(isMain));
     var tmp='';
 
-    ast.body.map((rib) => { tmp+= parser(rib , params , env,flowArr);
+    ast.body.map((rib) => { tmp+= parser(rib,params,env,flowArr,color);
     });
     if(ismainFrame===false) {
         var arr = tmp.split('\n');
@@ -93,16 +94,35 @@ const blockStatement = (ast,params,env,flowArr) =>
 
         down += flowArr + '->' + y + '\n';
 
-        down+=arr[arr.length-2]+'->'+'return0'+'\n';
+        //down+=arr[arr.length-2]+'->'+'return0'+'\n';
         return arr[arr.length - 2] + '\n';
     }
-    else return '';
+    else {
+
+        var arr1 = tmp.split('\n');
+        var tmpWhile = arr1[arr1.length - 3];
+
+        if(tmpWhile.substr(0,tmpWhile.length-1)==='while')
+        {
+            down += arr1[arr1.length - 3]+'(no)' + '->' + arr1[arr1.length - 2] + '\n';
+        }
+        else {
+            down += arr1[arr1.length - 3] + '->' + arr1[arr1.length - 2] + '\n';
+        }
+        return arr1[arr1.length - 2] + '\n';
+    }
+
+    //down+=arr[arr.length-2]+'->'+'return0'+'\n';
 
 };
 
-const programParser = (ast,params,env,flowArr)=> {
-    up+='st=>start: Start|past\n';
-    return ast.body.map((rib) => parser(rib, params, env,'st'));
+
+
+
+
+const programParser = (ast,params,env,flowArr,color)=> {
+    up+='st=>start: Start|green\n';
+    return ast.body.map((rib) => parser(rib, params, env,'st',color));
 
 };
 const funchelp = (ast,params,env,parms)=>
@@ -111,7 +131,7 @@ const funchelp = (ast,params,env,parms)=>
         env[parms[i]] = vars.body[0].expression.expressions[i];
     }
 };
-const FunctionDcl = (ast,params,env,flowArr)=>
+const FunctionDcl = (ast,params,env,flowArr,color)=>
 {
     const parms = ast.params.reduce((acc,curr)=> acc.concat(curr.name),[]);
     if(vars.body[0].expression.expressions) {
@@ -128,11 +148,11 @@ const FunctionDcl = (ast,params,env,flowArr)=>
     ast.body.body.map((rib) => {if(rib.type==='VariableDeclaration')
         counter++;});
     counterLetForClose=counter;
-    return parser(ast.body,params,env,flowArr);
+    return parser(ast.body,params,env,flowArr,color);
 
 };
 
-const varDecl= (ast,params,env,flowArr)=>
+const varDecl= (ast,params,env,flowArr,color)=>
 {
     counterLetForClose--;
 
@@ -169,16 +189,17 @@ const varDecl= (ast,params,env,flowArr)=>
     }
     if(counterLetForClose===0)
     {
-        up+='|past\n';
+        up+='|green\n';
         down+='st->let0'+'\n';
         return 'let0\n';
     }
     return '';
 
 };
-const assDecl= (ast,params,env,flowArr)=>
+const assDecl= (ast,params,env,flowArr,color)=>
 {
-    up+='ass'+assCounter+ '=>operation: '+escodegen.generate(ast.expression) +'|past\n';
+
+    up+='ass'+assCounter+ '=>operation: '+escodegen.generate(ast.expression) +'|'+color+'\n';
     assCounter++;
     var tmpAst = Object.assign({},ast.expression.right);
     env[ast.expression.left.name] = sub(tmpAst,params,env);
@@ -188,27 +209,23 @@ const assDecl= (ast,params,env,flowArr)=>
 
 };
 
-const ifExp = (ast,params,env,flowArr)=> {
-    isMain=false
+const ifExp = (ast,params,env,flowArr,color)=> {
+    isMain=false;
     // var copyAst = Object.assign({},ast);
 
     //var tmpAst = Object.assign({},ast.test);
     let tmpAst = JSON.parse(JSON.stringify(ast.test));
     var tmpAstTest= sub(tmpAst,params,env);
 
-    // ast.test = sub(ast.test,params,env);
-    //var tmpast = escodegen.generate(tmpAstTest);
-    //var newast =  esprima.parseScript(tmpast);
-
-    // var etay = sub(tmpAstTest,params,env);
 
     var tmp = eval(escodegen.generate(tmpAstTest));
     let ifCount = JSON.parse(JSON.stringify(ifCounter));
+    let nullCount = JSON.parse(JSON.stringify(nullCounter));
     up+='if'+ifCounter+ '=>condition: '+escodegen.generate(ast.test) +'|'+evaltmp(tmp,ast)+'\n';
     ifCounter++;
     if(down==='')
     {
-        down+='st->if'+ifCounter-1+'\n';
+        down+='st->if'+(ifCounter-1)+'\n';
     }
     else if(whileCounter===0 && ifCounter===1)
     {
@@ -218,35 +235,26 @@ const ifExp = (ast,params,env,flowArr)=> {
 
     var new1Env = Object.assign({},env);
     var new2Env = Object.assign({},env);
-    up+='null'+nullCounter+ '=>operation: '+'null|green\n';
+    up+='null'+nullCount+ '=>operation: '+'null|'+evaltmp(tmp,ast)+'\n';
 
-    var tmpNull = JSON.parse(JSON.stringify(nullCounter));
+
     nullCounter++;
     var returnCons='';
 
-    returnCons= parser(ast.consequent,params,new1Env,'if'+ifCount+'(yes)');
-    
-
-
-    //ast.consequent = parser(ast.consequent,params,new1Env);
-    //down+='if'+ifCount +'(yes)'+'->'+returnCons+'\n';
-    //down+=returnCons+'->'+'null'+tmpNull+'\n';
-    //let tmpAstAlt={};
+    returnCons= parser(ast.consequent,params,new1Env,'if'+ifCount+'(yes)',evaltmp(tmp,ast));
+    down+=returnCons.substr(0,returnCons.length-1)+'->'+'null'+nullCount+'\n';
+    down+='null'+nullCount+'->'+'return0'+'\n';
     let returnAlt='';
     if(ast.alternate) {
-
-        returnAlt= parser(ast.alternate, params, new2Env,'if'+ifCount+'(no)');
+        var color1='green';
+        if(evaltmp(tmp,ast)==='green')
+        {
+            color1='red';
+        }
+        returnAlt= parser(ast.alternate, params, new2Env,'if'+ifCount+'(no)',color1);
         down+='if'+ifCount +'(no)'+'->'+returnAlt+'\n';
+        down+=returnAlt.substr(0,returnAlt.length-1)+'->'+'null'+nullCount+'\n';
 
-
-        //var x1 = returnAlt[returnAlt.length-2];
-        //down+=x1+'->'+'null'+tmpNull+'\n';
-        //var y1 = returnAlt[0];
-       // down+='if'+ifCount+'(no)->'+y1+'\n';
-        ////
-
-        // down+='if'+ifCount +'(no)'+'->'+returnAlt+'\n';
-        // down+=returnAlt+'->'+'null'+tmpNull+'\n';
     }
 
 
@@ -264,11 +272,14 @@ const evaltmp = (tmp,ast)=>{
 
 };
 
-const whilExp= (ast,params,env,flowArr)=>{
-    isMain=false
+const whilExp= (ast,params,env,flowArr,color)=>{
+    isMain=false;
+
+
     //var tmpast = escodegen.generate(ast.test);
     // var newast =  esprima.parseScript(tmpast);
-
+    var whileCount = JSON.parse(JSON.stringify(whileCounter));
+    var nullCount = JSON.parse(JSON.stringify(nullCounter));
     ////
 
     let tmpAst = JSON.parse(JSON.stringify(ast.test));
@@ -284,31 +295,39 @@ const whilExp= (ast,params,env,flowArr)=>{
     ///
 
     //let tmp = eval(escodegen.generate(tmp,params,env)));
-    up+='while'+whileCounter+ '=>cond: '+escodegen.generate(ast.test) +'|'+evaltmp(tmp,ast)+'\n';
+    up+='while'+whileCounter+ '=>condition: '+escodegen.generate(ast.test) +'|'+evaltmp(tmp,ast)+'\n';
+    down+='null'+nullCount+'->'+'while'+whileCount+'\n';
+
+    up+='null'+nullCounter+ '=>operation: '+'null|'+evaltmp(tmp,ast)+'\n';
     whileCounter++;
+    nullCounter++;
     if(down==='')
     {
-        down+='st->while'+whileCounter-1;
+        down+='st->null'+nullCount+'\n';
     }
+
     if(whileCounter===1&&ifCounter===0)
     {
-        down+='let0->while'+whileCounter-1+'\n';
+        down+='let0->null'+ nullCount +'\n';
     }
     //let tmpTest = sub(ast.test,params,env);
 
     var newEnv = Object.assign({},env);
 
-    return parser(ast.body,params,newEnv,flowArr);
+    var tmp1= parser(ast.body,params,newEnv,('while'+whileCount+'(yes)'),evaltmp(tmp,ast));
 
+    down+=tmp1.substr(0,tmp1.length-1)+'->'+'null'+nullCount+'\n';
+
+    return 'while'+whileCount+'\n';
 
 };
 
 
-const returnExp= (ast,params,env,flowArr)=> {
+const returnExp= (ast,params,env,flowArr,color)=> {
 
     var tmpAstArgument= sub(ast.argument,params,env);
 
-    up+='return'+returnCounter+ '=>operation: '+escodegen.generate(ast.argument) +'|past\n';
+    up+='return'+returnCounter+ '=>operation: '+escodegen.generate(ast.argument) +'|'+'green'+'\n';
 
     returnCounter++;
 
