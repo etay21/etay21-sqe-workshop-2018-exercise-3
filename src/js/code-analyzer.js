@@ -84,18 +84,12 @@ const blockStatement = (ast,params,env,flowArr,color) =>
     for(let i=0;i<ast.body.length;i++)
     {
 
-        tmpReutn = parser(ast.body[i],params,env,tmpReutn,color);
-        tmpReutn=tmpReutn.substr(0,tmpReutn.length-1);
-        if(first===0&&tmpReutn!=='')
-        {
+        flowArr = parser(ast.body[i],params,env,flowArr,color);
+        flowArr=flowArr.substr(0,flowArr.length-1);
 
-            var y = tmpReutn;
-            down += flowArr + '->' + y + '\n';
-        }
-        first++;
     }
 
-    return tmpReutn+'\n';
+    return flowArr+'\n';
 
 };
 
@@ -105,6 +99,7 @@ const blockStatement = (ast,params,env,flowArr,color) =>
 
 const programParser = (ast,params,env,flowArr,color)=> {
     up+='st=>start: Start|green\n';
+
     return ast.body.map((rib) => parser(rib, params, env,'st',color));
 
 };
@@ -217,6 +212,7 @@ const ifExp = (ast,params,env,flowArr,color)=> {
     let ifCount = JSON.parse(JSON.stringify(ifCounter));
     let nullCount = JSON.parse(JSON.stringify(nullCounter));
     up+='if'+ifCounter+ '=>condition: '+escodegen.generate(ast.test) +'|'+evaltmp(tmp,ast)+'\n';
+
     if(flowArr!=='')
     {
         down+=flowArr+'->'+'if'+ifCount+'\n';
@@ -232,9 +228,10 @@ const ifExp = (ast,params,env,flowArr,color)=> {
     var returnCons='';
 
     returnCons= parser(ast.consequent,params,new1Env,'if'+ifCount+'(yes)',evaltmp(tmp,ast));
+    if(returnCons.substr(0, returnCons.length - 1)!=='') {
 
-    down+=returnCons.substr(0,returnCons.length-1)+'->'+'null'+nullCount+'\n';
-
+        down += returnCons.substr(0, returnCons.length - 1) + '->' + 'null' + nullCount + '\n';
+    }
 
     let returnAlt='';
     if(ast.alternate) {
@@ -281,7 +278,7 @@ const whilExp= (ast,params,env,flowArr,color)=>{
     down+='null'+nullCount+'->'+'while'+whileCount+'\n';
     if(flowArr!=='')
     {
-        down+=flowArr+'->'+'while'+whileCount+'\n';
+        down+=flowArr+'->'+'null'+nullCount+'\n';
     }
     up+='null'+nullCounter+ '=>operation: '+'null|'+evaltmp(tmp,ast)+'\n';
     whileCounter++;
@@ -291,10 +288,7 @@ const whilExp= (ast,params,env,flowArr,color)=>{
         down+='st->null'+nullCount+'\n';
     }
 
-    if(whileCounter===1&&ifCounter===0)
-    {
-        down+='let0->null'+ nullCount +'\n';
-    }
+  
     var newEnv = Object.assign({},env);
 
     var tmp1= parser(ast.body,params,newEnv,('while'+whileCount+'(yes)'),evaltmp(tmp,ast));
@@ -311,7 +305,7 @@ const returnExp= (ast,params,env,flowArr,color)=> {
     var tmpAstArgument= sub(ast.argument,params,env);
 
     up+='return'+returnCounter+ '=>operation: '+'return '+escodegen.generate(ast.argument) +'|'+'green'+'\n';
-    down+=flowArr+'->'+'return'+returnCounter;
+    down+=flowArr+'->'+'return'+returnCounter+'\n';
     returnCounter++;
 
     var x='return' + (returnCounter-1)+'\n';
