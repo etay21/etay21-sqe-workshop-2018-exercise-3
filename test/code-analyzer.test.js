@@ -417,7 +417,6 @@ describe('The javascript parser', () => {
             'null1->null0\n';
         assert.deepEqual(expect12,result12);
     });
-    
     it('test 13 -clean', () => {
         let expect13=parseCode('function foo(x){\n' +
             'let z=[1,2,3];\n' +

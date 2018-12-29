@@ -196,6 +196,7 @@ const varDecl= (ast,params,env)=>
     }
     return '';
 };
+
 const assDecl= (ast,params,env,flowArr,color)=>
 {
     up+='ass'+assCounter+ '=>operation: ('+runIndex+') \n'+escodegen.generate(ast.expression) +'|'+color+'\n';
