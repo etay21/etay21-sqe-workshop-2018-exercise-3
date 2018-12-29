@@ -37,7 +37,7 @@ const parseCode = (codeToParse,params) => {
     let flowArr={};
     var color='green';
     parser(func,params,env,flowArr,color);
-    //console.log(''+up+down);
+    // console.log(''+up+down);
     return ''+up+down;
 };
 
@@ -196,7 +196,6 @@ const varDecl= (ast,params,env)=>
     }
     return '';
 };
-
 const assDecl= (ast,params,env,flowArr,color)=>
 {
     up+='ass'+assCounter+ '=>operation: ('+runIndex+') \n'+escodegen.generate(ast.expression) +'|'+color+'\n';
@@ -281,6 +280,8 @@ const whilExp= (ast,params,env,flowArr,color)=>{
     if(down==='')
         down+='st->null'+nullCount+'\n';
     down+='null'+nullCount+'->'+'while'+whileCount+'\n';
+    //if(flowArr!=='')
+    down+=flowArr+'->'+'null'+nullCount+'\n';
     whileCounter++; nullCounter++;
     var newEnv = Object.assign({},env);
     var tmp1= parser(ast.body,params,newEnv,('while'+whileCount+'(yes)'),evaltmp(tmp,ast));
