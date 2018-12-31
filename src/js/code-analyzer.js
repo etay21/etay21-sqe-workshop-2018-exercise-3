@@ -37,7 +37,7 @@ const parseCode = (codeToParse,params) => {
     let flowArr={};
     var color='green';
     parser(func,params,env,flowArr,color);
-    // console.log(''+up+down);
+    //console.log(''+up+down);
     return ''+up+down;
 };
 
@@ -200,7 +200,6 @@ const assDecl= (ast,params,env,flowArr,color)=>
 {
     up+='ass'+assCounter+ '=>operation: ('+runIndex+') \n'+escodegen.generate(ast.expression) +'|'+color+'\n';
     runIndex++;
-    //if(flowArr!=='')
     down+=flowArr+'->'+'ass'+assCounter+'\n';
     assCounter++;
     var tmpAst = Object.assign({},ast.expression.right);
@@ -231,18 +230,18 @@ const ifExp = (ast,params,env,flowArr,color)=> {
     let ifCount = JSON.parse(JSON.stringify(ifCounter));
     let nullCount = JSON.parse(JSON.stringify(nullCounter));
     up+='if'+ifCounter+ '=>condition: ('+runIndex+') \n'+escodegen.generate(ast.test) +'|'+color+'\n'; runIndex++;
-    //if(flowArr!=='')
-    down+=flowArr+'->'+'if'+ifCount+'\n';
-    ifCounter++;
-    var new1Env = Object.assign({},env);
+    for(let i=0; i<flowArr.split('\n').length;i++)
+        down+=flowArr.split('\n')[i]+'->'+'if'+ifCount+'\n';
+    var new1Env = Object.assign({},env);ifCounter++;
     var color0=evalColor(ast,params,env,flowArr,color,tmp); nullCounter++;
     var returnCons= parser(ast.consequent,params,new1Env,'if'+ifCount+'(yes)',color0);
-    //if(returnCons.substr(0, returnCons.length - 1)!=='')
-    down += returnCons.substr(0, returnCons.length - 1) + '->' + 'null' + nullCount + '\n';
+    for(let i=0; i<returnCons.split('\n').length-1;i++)
+        down+=returnCons.split('\n')[i]+'->' + 'null' + nullCount + '\n';
     if(ast.alternate)
-        takeCareAlt(ast,params,env,flowArr,color,tmp,ifCount,nullCount);
-    up+='null'+nullCount+ '=>operation: ('+runIndex+') \n'+'null|'+'green'+'\n'; runIndex++;
-    return 'null'+nullCount+'\n';
+        return takeCareAlt(ast, params, env, flowArr, color, tmp, ifCount, nullCount);
+    else {
+        up+='null'+nullCount+ '=>operation: ('+runIndex+') \n'+'null|'+'green'+'\n'; runIndex++;
+        return 'if' + ifCount + '(no)' + '\n' + returnCons;}
 };
 
 const takeCareAlt = (ast,params,env,flowArr,color,tmp,ifCount,nullCount)=> {
@@ -255,8 +254,10 @@ const takeCareAlt = (ast,params,env,flowArr,color,tmp,ifCount,nullCount)=> {
         color1='red';
     nullCounter++;
     var  returnAlt= parser(ast.alternate, params, new2Env,'if'+ifCount+'(no)',color1);
-    down+=returnAlt.substr(0,returnAlt.length-1)+'->'+'null'+nullCount+'\n';
-    return returnAlt;
+    for(let i=0; i<returnAlt.split('\n').length-1;i++)
+        down+=returnAlt.split('\n')[i]+'->'+'null'+nullCount+'\n';
+    up+='null'+nullCount+ '=>operation: ('+runIndex+') \n'+'null|'+'green'+'\n'; runIndex++;
+    return 'null'+nullCount+'\n';
 };
 
 const evaltmp = (tmp)=>{
@@ -266,26 +267,26 @@ const evaltmp = (tmp)=>{
     else {
         return 'red';
     }
-
 };
 
 const whilExp= (ast,params,env,flowArr,color)=>{
     var whileCount = JSON.parse(JSON.stringify(whileCounter));
     var nullCount = JSON.parse(JSON.stringify(nullCounter));
     let tmpAst = JSON.parse(JSON.stringify(ast.test));
-    var tmpAstTest= sub(tmpAst,params,env);
-    var tmp = eval(escodegen.generate(tmpAstTest));
-    up+='null'+nullCounter+ '=>operation: ('+runIndex+') \n'+'null|'+evaltmp(tmp,ast)+'\n';runIndex++;
-    up+='while'+whileCounter+ '=>condition: ('+runIndex+') \n'+escodegen.generate(ast.test) +'|'+color+'\n';runIndex++;
+    var tmpAstTest= sub(tmpAst,params,env);var tmp = eval(escodegen.generate(tmpAstTest));
+    var color0 = evalColor(ast,params,env,flowArr,color,tmp);
+    up+='null'+nullCounter+ '=>operation: ('+runIndex+') \n'+'null|'+color+'\n';runIndex++;
+    up+='while'+whileCounter+ '=>condition: ('+runIndex+') \n'+escodegen.generate(ast.test) +'|'+color0+'\n';runIndex++;
     if(down==='')
         down+='st->null'+nullCount+'\n';
     down+='null'+nullCount+'->'+'while'+whileCount+'\n';
-    //if(flowArr!=='')
-    down+=flowArr+'->'+'null'+nullCount+'\n';
+    for(let i=0; i<flowArr.split('\n').length;i++)
+        down+=flowArr.split('\n')[i]+'->'+'null'+nullCount+'\n';
     whileCounter++; nullCounter++;
     var newEnv = Object.assign({},env);
-    var tmp1= parser(ast.body,params,newEnv,('while'+whileCount+'(yes)'),evaltmp(tmp,ast));
-    down+=tmp1.substr(0,tmp1.length-1)+'->'+'null'+nullCount+'\n';
+    var tmp1= parser(ast.body,params,newEnv,('while'+whileCount+'(yes)'),color0);
+    for(let i=0; i<tmp1.split('\n').length-1;i++)
+        down+=tmp1.split('\n')[i]+'->'+'null'+nullCount+'\n';
     return 'while'+whileCount+'(no)'+'\n';
 };
 
@@ -294,8 +295,10 @@ const returnExp= (ast,params,env,flowArr,color)=> {
     sub(ast.argument,params,env);
     up+='return'+returnCounter+ '=>operation: ('+runIndex+') \n'+'return '+escodegen.generate(ast.argument) +'|'+color+'\n';
     runIndex++;
-    down+=flowArr+'->'+'return'+returnCounter+'\n';
+    for(let i=0; i<flowArr.split('\n').length;i++)
+        down+=flowArr.split('\n')[i]+'->'+'return'+returnCounter+'\n';
     returnCounter++;
+
     return 'return0' + (returnCounter-1)+'\n';
 };
 
