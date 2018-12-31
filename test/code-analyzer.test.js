@@ -159,12 +159,12 @@ describe('The javascript parser', () => {
             'if0=>condition: (1) \n' +
             'b < z|green\n' +
             'null1=>operation: (2) \n' +
-            'null|green\n' +
+            'null|red\n' +
             'while0=>condition: (3) \n' +
             '3 > 2|red\n' +
             'ass0=>operation: (4) \n' +
             'a++\n' +
-            '|green\n' +
+            '|red\n' +
             'null0=>operation: (5) \n' +
             'null|green\n' +
             'return0=>operation: (6) \n' +
@@ -176,7 +176,8 @@ describe('The javascript parser', () => {
             'while0(yes)->ass0\n' +
             'ass0->null1\n' +
             'while0(no)->null0\n' +
-            'null0->return0\n';
+            'if0(no)->return0\n' +
+            'while0(no)->return0\n';
         assert.deepEqual(expect5,result5)
         ;
     });
@@ -187,9 +188,9 @@ describe('The javascript parser', () => {
             'x = x + 1\n' +
             '|green\n' +
             'null0=>operation: (1) \n' +
-            'null|red\n' +
+            'null|green\n' +
             'while0=>condition: (2) \n' +
-            'x < x|green\n' +
+            'x < x|red\n' +
             'ass1=>operation: (3) \n' +
             'x++\n' +
             '|red\n' +
@@ -436,9 +437,9 @@ describe('The javascript parser', () => {
             ']\n' +
             '|green\n' +
             'null0=>operation: (1) \n' +
-            'null|red\n' +
+            'null|green\n' +
             'while0=>condition: (2) \n' +
-            '3 > x[2]|green\n' +
+            '3 > x[2]|red\n' +
             'ass0=>operation: (3) \n' +
             'z[1] = 4\n' +
             '|red\n' +
@@ -466,9 +467,9 @@ describe('The javascript parser', () => {
             '\n','1');
         let result14='st=>start: Start|green\n' +
             'null0=>operation: (0) \n' +
-            'null|red\n' +
+            'null|green\n' +
             'while0=>condition: (1) \n' +
-            'x > 3|green\n' +
+            'x > 3|red\n' +
             'ass0=>operation: (2) \n' +
             'x--\n' +
             '|red\n' +
@@ -497,7 +498,8 @@ describe('The javascript parser', () => {
             'return z|green\n' +
             'st->if0\n' +
             'if0(yes)->null0\n' +
-            'null0->return0\n';
+            'if0(no)->return0\n' +
+            'if0(yes)->return0\n';
         assert.deepEqual(expect15,result15);
     });
 });
